@@ -5,7 +5,6 @@ interface WrapperProps {
     /* optional maxW property */
     variant?: 'small' | 'regular',
     children: React.ReactNode,
-    
 }
 
 export const Wrapper: React.FC<WrapperProps> = ({ children, variant="regular" }) => {
