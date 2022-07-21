@@ -1,5 +1,4 @@
-import { withUrqlClient } from "next-urql";
-import { dedupExchange, fetchExchange } from "urql";
+import { dedupExchange, Exchange, fetchExchange } from "urql";
 import { cacheExchange } from "@urql/exchange-graphcache";
 import {
   LoginMutation,
@@ -9,7 +8,23 @@ import {
   RegisterMutation,
 } from "../generated/graphql";
 import { betterUpdateQuery } from "./betterUpdateQuery";
+import { pipe, tap } from "wonka";
+import Router from "next/router";
 
+const errorExchange: Exchange =
+  ({ forward }) =>
+  (ops$) => {
+    return pipe(
+      forward(ops$),
+      tap(({ error }) => {
+        if (error) {
+          if (error?.message.includes("Authentication required")) {
+            Router.replace("/login");
+          }
+        }
+      })
+    );
+  };
 export const createUrqlClient = (ssrExchange: any) => ({
   url: "http://localhost:5000/graphql",
   exchanges: [
@@ -61,6 +76,7 @@ export const createUrqlClient = (ssrExchange: any) => ({
         },
       },
     }),
+    errorExchange,
     ssrExchange,
     fetchExchange,
   ],
