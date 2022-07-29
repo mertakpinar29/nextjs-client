@@ -33,16 +33,22 @@ const errorExchange: Exchange =
 
 export const cursorPagination = (): Resolver => {
   return (_parent, fieldArgs, cache, info) => {
+    /* 
+       "fieldArgs is variables that is used for that operatio"
+       "parentKey" gives information about current operation
+       "fieldName" is the name of the operation
+    */
     const { parentKey: entityKey, fieldName } = info;
-    // entityKey == Query, fieldName == posts
+    // parentKey == Query, fieldName == posts
+    /* Getting al Queries including Me query */
     const allFields = cache.inspectFields(entityKey);
+    /* Get fields related to posts query */
     const fieldInfos = allFields.filter((info) => info.fieldName === fieldName);
-    const size = fieldInfos.length;
-    if (size === 0) {
+    if (fieldInfos.length === 0) {
       return undefined;
     }
 
-    // posts({ limit: 10 })
+    // fieldKey = "posts({ limit: 10 })"
     const fieldKey = `${fieldName}(${stringifyVariables(fieldArgs)})`;
     const isItInTheCache = cache.resolve(
       cache.resolve(entityKey, fieldKey) as string,
@@ -86,6 +92,16 @@ export const createUrqlClient = (ssrExchange: any) => ({
       },
       updates: {
         Mutation: {
+          createPost: (_result, args, cache, info) => {
+            // cleans the cache for posts, refetches it
+            const allFields = cache.inspectFields("Query");
+            const fieldInfos = allFields.filter(
+              (info) => info.fieldName === "posts"
+            );
+            fieldInfos.forEach((fi) => {
+              cache.invalidate("Query", "posts", fi.arguments || {});
+            });
+          },
           logout: (_result: LogoutMutation, args, cache, info) => {
             betterUpdateQuery<LogoutMutation, MeQuery>(
               cache,
